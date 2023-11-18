@@ -23,8 +23,8 @@ int main(void)
     FILE *game_buff;
     char read_byte;
 
-    __game_table_t gtable = {0, { 0 }, { 0 }};
-
+    __game_table_t gtable = {0, 0, 0, 0};
+    char buffered_table[21] = {'\0'};
 
     if ( (host_sock = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
         perror("error while creating socket");
@@ -54,15 +54,19 @@ int main(void)
     }
     game_buff = fdopen(conn, "r");
 
-    bool game_running = true;
-    while (game_running) {
-
-
-        /* reading incoming cliente data */
-        while ( (read_byte = fgetc(game_buff)) != EOF ) {
-            putchar(read_byte);
-        }
+    /* Initializing game and starting game loop */
+    while (!is_full(&gtable) && gtable.winner == 0) {
+        display_table(&gtable);
+        play(&gtable);
+        set_winner(&gtable);
+        send_table(&gtable, conn);
+        
+        printf("Waiting for opponent to play...\n");
+        read_table(&gtable, conn);
     }
+    display_table(&gtable);
+    display_winner(&gtable);
+
 
     close(host_sock);
     return 0;

@@ -37,8 +37,8 @@
  * Note: this allow us to codify the whole table using only 19 bits.
 */
 typedef struct __game_table_t {
-    unsigned winner : 2;
-    unsigned turn : 1;
+    unsigned short winner : 2;
+    unsigned short turn : 1;
     unsigned short x : 9;
     unsigned short o : 9;
 } __game_table_t;
@@ -55,7 +55,7 @@ bool _check_patterns(unsigned short sym)
     return false;
 }
 
-bool _is_full(struct __game_table_t *gtable)
+extern bool is_full(struct __game_table_t *gtable)
 {
     return (gtable->x | gtable->o) == 0x1ff;
 }
@@ -120,14 +120,46 @@ extern void display_winner(struct __game_table_t *gtable)
             puts("tie");
             break;
         case 1:
-            puts("X wins");
+            puts("O wins");
             break;
         case 2:
-            puts("O wins");
+            puts("X wins");
             break;
     }
 }
 
+extern void send_table(struct __game_table_t *gtable, int sockfd)
+{
+    unsigned short winner = gtable->winner;
+    unsigned short turn = gtable->turn;
+    unsigned short x = gtable->x;
+    unsigned short o = gtable->o;
+
+    write(sockfd, &winner, sizeof(unsigned short));
+    write(sockfd, &turn, sizeof(unsigned short));
+    write(sockfd, &x, sizeof(unsigned short));
+    write(sockfd, &o, sizeof(unsigned short));
+}
+
+extern void read_table(struct __game_table_t *gtable, int sockfd)
+{
+    unsigned short winner;
+    unsigned short turn;
+    unsigned short x;
+    unsigned short o;
+
+    read(sockfd, &winner, sizeof(unsigned short));
+    read(sockfd, &turn, sizeof(unsigned short));
+    read(sockfd, &x, sizeof(unsigned short));
+    read(sockfd, &o, sizeof(unsigned short));
+
+    gtable->winner = winner;
+    gtable->turn = turn;
+    gtable->x = x;
+    gtable->o = o;
+}
+
+/*
 int main(void)
 {
     __game_table_t gtable = {0, 0, 0, 0};
@@ -142,3 +174,4 @@ int main(void)
 
     return 0;
 }
+*/

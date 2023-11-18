@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <stdbool.h>
 
 #include "API/game_api.h"
 
@@ -17,6 +18,8 @@ int main(void)
     
     FILE *game_buff;
     char read_byte;
+
+    __game_table_t gtable = {0, 0, 0, 0};
 
 
     if ( (cplayer_sock = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
@@ -37,12 +40,18 @@ int main(void)
     }
     game_buff = fdopen(cplayer_sock, "r");
     
-    char* message = "Hello, world from Client\n";
-    send(cplayer_sock, message, strlen(message), 0);
+    while (!is_full(&gtable) && gtable.winner == 0) {
+        printf("Waiting for host to play...\n");
+        read_table(&gtable, cplayer_sock);
+        
+        display_table(&gtable);
+        play(&gtable);
+        set_winner(&gtable);
 
-    while ( (read_byte = fgetc(game_buff)) != EOF ) {
-        putchar(read_byte);
+        send_table(&gtable, cplayer_sock);
     }
+    display_table(&gtable);
+    display_winner(&gtable);
 
     close(cplayer_sock);
     return 0;
