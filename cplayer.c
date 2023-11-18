@@ -43,7 +43,10 @@ int main(void)
     while (!is_full(&gtable) && gtable.winner == 0) {
         printf("Waiting for host to play...\n");
         read_table(&gtable, cplayer_sock);
-        
+
+        if (is_full(&gtable) || gtable.winner != 0)
+            break;
+
         display_table(&gtable);
         play(&gtable);
         set_winner(&gtable);

@@ -1,7 +1,7 @@
 #ifndef __game_api_h
 #define __game_api_h
 
-const char *game_addr_path = "/home/mangolito/final.txt";
+const char *game_addr_path = "/home/mangolito/ttt.txt";
 
 typedef struct __game_table_t {
     unsigned winner : 2;

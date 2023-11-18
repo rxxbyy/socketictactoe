@@ -59,7 +59,11 @@ int main(void)
         display_table(&gtable);
         play(&gtable);
         set_winner(&gtable);
+
         send_table(&gtable, conn);
+
+        if (gtable.winner != 0)
+            break;
         
         printf("Waiting for opponent to play...\n");
         read_table(&gtable, conn);

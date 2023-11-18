@@ -65,7 +65,7 @@ extern void play(struct __game_table_t* gtable)
 make_play_again:
     unsigned short position;
 
-    printf("Make a play: ");
+    printf("Enter the slot number: ");
     scanf("%hu", &position);
 
     position--;
@@ -97,7 +97,7 @@ extern void display_table(struct __game_table_t* gtable)
         else if ((gtable->o & bitmask))
             printf(" O ");
         else
-            printf(" - ");
+            printf(" %d ", i+1);
         bitmask <<= 1;
 
         if ((i + 1) % 3 == 0)
@@ -120,10 +120,10 @@ extern void display_winner(struct __game_table_t *gtable)
             puts("tie");
             break;
         case 1:
-            puts("O wins");
+            puts("X wins");
             break;
         case 2:
-            puts("X wins");
+            puts("O wins");
             break;
     }
 }
@@ -158,20 +158,3 @@ extern void read_table(struct __game_table_t *gtable, int sockfd)
     gtable->x = x;
     gtable->o = o;
 }
-
-/*
-int main(void)
-{
-    __game_table_t gtable = {0, 0, 0, 0};
-
-    while (!_is_full(&gtable) && gtable.winner == 0) {
-        display_table(&gtable);
-        play(&gtable);
-        set_winner(&gtable);
-    }
-    display_table(&gtable);
-    display_winner(&gtable);
-
-    return 0;
-}
-*/
