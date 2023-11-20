@@ -34,8 +34,8 @@
  *   otherwise, it's O's turn.
  * - x, y: they're 9-bit fields indicating the position of his corresponding
  *   symbol, respectively.
- * Note: this allow us to codify the whole table using only 19 bits.
-*/
+ * Note: this allow us to codify the whole table using only 21 bits.
+ */
 typedef struct __game_table_t {
     unsigned short winner : 2;
     unsigned short turn : 1;
@@ -43,7 +43,7 @@ typedef struct __game_table_t {
     unsigned short o : 9;
 } __game_table_t;
 
-bool _check_patterns(unsigned short sym)
+static bool _check_patterns(unsigned short sym)
 {
     unsigned short winning_patterns[8] = {ROW1, ROW2, ROW3, COL1, COL2, COL3,
                                           DIAG1, DIAG2};
@@ -130,24 +130,29 @@ extern void display_winner(struct __game_table_t *gtable)
 
 extern void send_table(struct __game_table_t *gtable, int sockfd)
 {
+    char sign = 't';
     unsigned short winner = gtable->winner;
     unsigned short turn = gtable->turn;
     unsigned short x = gtable->x;
     unsigned short o = gtable->o;
 
+    write(sockfd, &sign, sizeof(char));
     write(sockfd, &winner, sizeof(unsigned short));
     write(sockfd, &turn, sizeof(unsigned short));
     write(sockfd, &x, sizeof(unsigned short));
     write(sockfd, &o, sizeof(unsigned short));
 }
 
-extern void read_table(struct __game_table_t *gtable, int sockfd)
+extern void read_table(struct __game_table_t *gtable, int sockfd, bool sign)
 {
+    char table_sign;
     unsigned short winner;
     unsigned short turn;
     unsigned short x;
     unsigned short o;
 
+    if (sign)
+        read(sockfd, &table_sign, sizeof(char));
     read(sockfd, &winner, sizeof(unsigned short));
     read(sockfd, &turn, sizeof(unsigned short));
     read(sockfd, &x, sizeof(unsigned short));
@@ -157,4 +162,24 @@ extern void read_table(struct __game_table_t *gtable, int sockfd)
     gtable->turn = turn;
     gtable->x = x;
     gtable->o = o;
+    
+    printf("Table: (%hu, %hu, %hu, %hu)\n", winner, turn, x, o);
+}
+
+extern void display_menu(void)
+{
+    char *ttt_logo = "\t\tWelcome to\n"
+" _____  _         _____              _____             \n"
+"|_   _||_| ___   |_   _| ___  ___   |_   _| ___  ___   \n"
+"  | |  | ||  _|    | |  | .'||  _|    | |  | . || -_|  \n"
+"  |_|  |_||___|    |_|  |__,||___|    |_|  |___||___|  \n"
+"                                                       \n\n";
+    write(STDOUT_FILENO, ttt_logo, strlen(ttt_logo));
+    fflush(stdout);
+    printf("=============================================\n");
+    printf("\t\tMenu\n");
+    printf("=============================================\n");
+    printf("[1]: Start the game server\n");
+    printf("[2]: Exit\n");
+    printf("Select an option: ");
 }

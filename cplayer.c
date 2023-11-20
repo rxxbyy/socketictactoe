@@ -9,6 +9,7 @@
 #include <stdbool.h>
 
 #include "API/game_api.h"
+#include "API/chat_api.h"
 
 int main(void)
 {
@@ -17,7 +18,7 @@ int main(void)
     size_t address_len;
     
     FILE *game_buff;
-    char read_byte;
+    char user_op;
 
     __game_table_t gtable = {0, 0, 0, 0};
 
@@ -39,19 +40,42 @@ int main(void)
         exit(EXIT_FAILURE);
     }
     game_buff = fdopen(cplayer_sock, "r");
+
+    char msg_sign;
+    char _nullchar = '\0';
+    char chat_msg[MAX_BUF_SIZE];
     
     while (!is_full(&gtable) && gtable.winner == 0) {
-        printf("Waiting for host to play...\n");
-        read_table(&gtable, cplayer_sock);
+        printf("Waiting for host...\n");
+        read_sign(cplayer_sock, &msg_sign);
 
-        if (is_full(&gtable) || gtable.winner != 0)
-            break;
+        switch (msg_sign) {
+            case 't':
+                read_table(&gtable, cplayer_sock, 0);
+                if (is_full(&gtable) || gtable.winner != 0)
+                    break;
 
-        display_table(&gtable);
-        play(&gtable);
-        set_winner(&gtable);
+                display_table(&gtable);
 
-        send_table(&gtable, cplayer_sock);
+                play(&gtable);
+                set_winner(&gtable);
+                send_table(&gtable, cplayer_sock);
+                break;
+            case 'c':
+                read_message(cplayer_sock, chat_msg);
+                if (strcmp(chat_msg, "EOC") != 0) {
+                    /*send_chat_sign(cplayer_sock);*/
+                    if (send_message(cplayer_sock)) {
+                        msg_sign = 't';
+                        continue;
+                    }
+                } else {
+                    msg_sign = 't';
+                    continue;
+                }
+                break;
+        }
+
     }
     display_table(&gtable);
     display_winner(&gtable);
