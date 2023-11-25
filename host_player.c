@@ -21,7 +21,6 @@ int main(void)
     struct sockaddr_un host_address;
     struct sockaddr_un incoming_socketaddr;
 
-    FILE *game_buff;
     char user_op;
 
     __game_table_t gtable = {0, 0, 0, 0};
@@ -53,8 +52,6 @@ int main(void)
         perror("accept: host socket accept connection error!");
         exit(EXIT_FAILURE);
     }
-    game_buff = fdopen(conn, "r");
-
 
     /* Initializing game and starting game loop */
     /*display_menu();
@@ -63,20 +60,21 @@ int main(void)
     char chat_msg[MAX_BUF_SIZE];
     char msg_sign = 't';
     char _nullchar = '\0';
+    int conn_status = 1;
 
     int i = 0;
-    while (!is_full(&gtable) && gtable.winner == 0) {
+    while (!is_full(&gtable) && gtable.winner == 0 && conn_status != 0) {
         switch (msg_sign) {
             case 'c':
-                read_sign(conn, &msg_sign);
+                conn_status = read_sign(conn, &msg_sign);
+
                 read_message(conn, chat_msg);
-                if (send_message(conn)) {
+                if (send_message(conn))
                     msg_sign = 't';
-                }
                 else
                     msg_sign = 'c';
                 continue;
-                break;
+            break;
             case 't':
                 display_table(&gtable);
                 printf("[1] play\n");
@@ -88,26 +86,31 @@ int main(void)
                     case 1:
                         play(&gtable);
                         set_winner(&gtable);
-                        send_table(&gtable, conn);
+                        conn_status = send_table(&gtable, conn);
 
                         if (gtable.winner != 0)
                             break;
 
                         printf("Waiting for opponent to play...\n");
-                        read_table(&gtable, conn, 1);
-                        i = 0;
-                        break;
+
+                        conn_status = read_table(&gtable, conn, 1);
+                    break;
                     case 2:
                         /*send_chat_sign(conn);*/
                         send_message(conn);
                         msg_sign = 'c';
-                        break;
+                    break;
                 }
-                i++;
         }
     }
-    display_table(&gtable);
-    display_winner(&gtable);
+
+    if (conn_status == 0) {
+        printf("Opponent has abandoned the match\n");
+        (gtable.turn == 1 ? printf("X wins\n") : printf("O wins\n"));
+    } else {
+        display_table(&gtable);
+        display_winner(&gtable);
+    }
 
     close(host_sock); /* close connection between two sockets */
     return 0;

@@ -43,6 +43,7 @@ typedef struct __game_table_t {
     unsigned short o : 9;
 } __game_table_t;
 
+
 static bool _check_patterns(unsigned short sym)
 {
     unsigned short winning_patterns[8] = {ROW1, ROW2, ROW3, COL1, COL2, COL3,
@@ -117,7 +118,7 @@ extern void display_winner(struct __game_table_t *gtable)
 {
     switch (gtable->winner) {
         case 0:
-            puts("tie");
+            puts("Game end in Tie");
             break;
         case 1:
             puts("X wins");
@@ -128,31 +129,40 @@ extern void display_winner(struct __game_table_t *gtable)
     }
 }
 
-extern void send_table(struct __game_table_t *gtable, int sockfd)
+extern int send_table(struct __game_table_t *gtable, int sockfd)
 {
+    int n;
     char sign = 't';
     unsigned short winner = gtable->winner;
     unsigned short turn = gtable->turn;
     unsigned short x = gtable->x;
     unsigned short o = gtable->o;
 
-    write(sockfd, &sign, sizeof(char));
+    if ( (n = write(sockfd, &sign, sizeof(char))) == -1)
+        return 0;
+
     write(sockfd, &winner, sizeof(unsigned short));
     write(sockfd, &turn, sizeof(unsigned short));
     write(sockfd, &x, sizeof(unsigned short));
     write(sockfd, &o, sizeof(unsigned short));
+
+    return 1;
 }
 
-extern void read_table(struct __game_table_t *gtable, int sockfd, bool sign)
+extern int read_table(struct __game_table_t *gtable, int sockfd, bool sign)
 {
+    int n;
     char table_sign;
     unsigned short winner;
     unsigned short turn;
     unsigned short x;
     unsigned short o;
 
-    if (sign)
-        read(sockfd, &table_sign, sizeof(char));
+    if (sign) {
+        n = read(sockfd, &table_sign, sizeof(char));
+        if (n == 0)
+            return n;
+    }
     read(sockfd, &winner, sizeof(unsigned short));
     read(sockfd, &turn, sizeof(unsigned short));
     read(sockfd, &x, sizeof(unsigned short));
@@ -162,8 +172,8 @@ extern void read_table(struct __game_table_t *gtable, int sockfd, bool sign)
     gtable->turn = turn;
     gtable->x = x;
     gtable->o = o;
-    
-    printf("Table: (%hu, %hu, %hu, %hu)\n", winner, turn, x, o);
+
+    return 1;
 }
 
 extern void display_menu(void)
