@@ -1,3 +1,14 @@
+/* ===========================================================================
+ *  SockeTicTacToe - player.c
+ * ===========================================================================
+ * Client side code. Creates a PF_UNIX socket and connect to the game address
+ * given defined in game_api.h. Client can't start a new chat. It only 
+ * responds to the server queries.
+ * ===========================================================================
+ * date: nov 26, 2023
+ * author: rxxbyy
+ * ===========================================================================
+ */
 #include <stddef.h>
 #include <stdio.h>
 #include <errno.h>
@@ -11,23 +22,29 @@
 #include "API/game_api.h"
 #include "API/chat_api.h"
 
+
 int main(void)
 {
-    int cplayer_sock;
-    struct sockaddr_un server_address;
-    size_t address_len;
+    int cplayer_sock;                       /* client socket file descriptor */
+    struct sockaddr_un server_address;      /* address we'll connect to */
+    size_t address_len;                     /* client address length  */
     
-    FILE *game_buff;
-    char user_op;
+    __game_table_t gtable = {0, 0, 0, 0};   /* initialize a game table from game API */
+    char user_op;                           /* store user input options */
 
-    __game_table_t gtable = {0, 0, 0, 0};
+    char msg_sign;                          /* current message sign */
+    char chat_msg[MAX_BUF_SIZE];            /* buffer for receive messages */
+    int conn_status = 1;                    /* connnecton status (1 = ok, 0 = bad) */
 
 
+    /* create a unix protocol family socket of type SOCK_STREAM, using the 
+    default protocol (0) */
     if ( (cplayer_sock = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
         perror("error while creating socket");
         exit(1);
     }
 
+    /* setup the address we want to connect to */
     server_address.sun_family = AF_UNIX;
     strncpy(server_address.sun_path, game_addr_path, sizeof(server_address.sun_path));
     server_address.sun_path[sizeof(server_address.sun_path) - 1] = '\0';
@@ -35,20 +52,21 @@ int main(void)
     address_len = sizeof (server_address.sun_family)
                     + strlen(server_address.sun_path);
 
+    /* connecting to the address */
     if ((connect(cplayer_sock, (struct sockaddr *) &server_address, address_len)) < 0) {
         perror("connect: client socket connection error!");
         exit(EXIT_FAILURE);
     }
-    game_buff = fdopen(cplayer_sock, "r");
 
-    char msg_sign;
-    char chat_msg[MAX_BUF_SIZE];
-    int conn_status = 1;
-    
     while (!is_full(&gtable) && gtable.winner == 0 && conn_status) {
         printf("Waiting for host...\n");
-        conn_status = read_sign(cplayer_sock, &msg_sign);
 
+        /* We use the same channel of communitacion for send/receive the game 
+        table, and for send/receive messages, thus, we need a way to
+        detect if the incoming message is a chat type (c) or a game
+        table (t). */
+
+        conn_status = read_sign(cplayer_sock, &msg_sign);
         switch (msg_sign) {
             case 't':
                 conn_status = read_table(&gtable, cplayer_sock, 0);
@@ -77,8 +95,8 @@ int main(void)
                 break;
         }
     }
-end_game:
-    if (conn_status == 0) {
+end_game: /* we jump here if the while loop end or if a winner is detected */
+    if (conn_status == 0) { /* checking if the host killed his process during the game */
         printf("Opponent has abandoned the match\n");
         (gtable.turn == 1 ? printf("X wins\n") : printf("O wins\n"));
     } else {

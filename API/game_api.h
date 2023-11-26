@@ -1,6 +1,8 @@
 #ifndef __game_api_h
 #define __game_api_h
 
+/* path associated to the names of the both host and client 
+sockets */
 const char *game_addr_path = "/home/mangolito/ttt.txt";
 
 typedef struct __game_table_t {

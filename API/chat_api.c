@@ -1,3 +1,16 @@
+/* ===========================================================================
+ *  SockeTicTacToe - API/chat_api.c
+ * ===========================================================================
+ * The chat api contains all the functions that let the both host and client
+ * send and receive messages in form of string of chars.
+ * We use the same stream as a bidirectional multipurpose channel, this is
+ * we send messages and the table over the same channel. Thus, we need to send
+ * a sign before the actual message indicating what we are gonna read.
+ * ===========================================================================
+ * date: nov 26, 2023
+ * author: rxxbyy
+ * ===========================================================================
+ */
 #include <stddef.h>
 #include <stdio.h>
 #include <errno.h>
@@ -11,25 +24,34 @@
 #include <string.h>
 
 
-#define MAX_BUF_SIZE 200
+#define MAX_BUF_SIZE 200 /* Maxmimum size of the message buffer */
 
 
+/* read_sign(): read one the message sign from the connection
+    stream and put it in the out identifier `msg_sign`.
+*/
 extern int read_sign(int __sockfd, char *msg_sign)
 {
     int n;
 
     n = read(__sockfd, msg_sign, sizeof(char));
-    /*printf("%c\n", *msg_sign);*/
-
     return n;
 }
 
+/* send_chat_sign(): send the char sign 'c' (1 byte)
+    to the peer indicating that a chat message is expected
+*/
 extern void send_chat_sign(int __sockfd)
 {
     const char chat_sign = 'c';
     write(__sockfd, &chat_sign, sizeof(char));
 }
 
+/* send_message(): ask for the user to type a message and send
+    it over the connection stream.
+    returns 1 if we send the string "EOC" indicating chat
+    mode is about to close.
+*/
 extern bool send_message(int __sockfd)
 {
     char msg_buff[MAX_BUF_SIZE];
@@ -44,6 +66,12 @@ extern bool send_message(int __sockfd)
     return (msg_buff[0] == 'E' && msg_buff[1] == 'O' && msg_buff[2] == 'C');
 }
 
+/* read_message(): read a whole string from a connection stream
+    an write it into `*__to_buf`. There were problems reading
+    a whole line from the socket stream (using readline function 
+    implemented below), so we use '.' char to indicate a space,
+    and we can scape them (\.) to see an actual colon.
+*/
 extern void read_message(int __sockfd, char *__to_buf)
 {
     int i;
@@ -66,6 +94,11 @@ extern void read_message(int __sockfd, char *__to_buf)
         __to_buf[i] = '\0';
 }
 
+/* readline(): read a line from a stream associated to `fd` and
+    put it into `buffer`.
+    NOTE: this function is not used in the project (it is just to show
+    my attempt to read a line from the stream)
+*/
 ssize_t readline(int fd, void *buffer, size_t n)
 {
     ssize_t num_read;       /* number of bytes fetched by last read() */
