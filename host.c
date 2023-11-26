@@ -1,3 +1,7 @@
+/* ===========================================================================
+ *  SockeTicTacToe - host.c
+ * ===========================================================================
+ */
 #include <stddef.h>
 #include <stdio.h>
 #include <errno.h>
@@ -20,12 +24,16 @@ int main(void)
     socklen_t isocklen = sizeof (struct sockaddr_un);
     struct sockaddr_un host_address;
     struct sockaddr_un incoming_socketaddr;
-
-    char user_op;
-
+    int user_op;
     __game_table_t gtable = {0, 0, 0, 0};
-    char buffered_table[21] = {'\0'};
 
+    display_menu();
+    scanf("%d", &user_op);
+
+    if (user_op != 1)
+        exit(0);
+
+    printf("Waiting for an opponent to connect...\n");
     if ( (host_sock = socket(PF_UNIX, SOCK_STREAM, 0)) < 0) {
         perror("error while creating socket");
         exit(1);
@@ -53,16 +61,10 @@ int main(void)
         exit(EXIT_FAILURE);
     }
 
-    /* Initializing game and starting game loop */
-    /*display_menu();
-    scanf("%d", &user_op);*/
-
     char chat_msg[MAX_BUF_SIZE];
     char msg_sign = 't';
-    char _nullchar = '\0';
     int conn_status = 1;
 
-    int i = 0;
     while (!is_full(&gtable) && gtable.winner == 0 && conn_status != 0) {
         switch (msg_sign) {
             case 'c':
@@ -77,6 +79,7 @@ int main(void)
             break;
             case 't':
                 display_table(&gtable);
+                printf("Select an option\n");
                 printf("[1] play\n");
                 printf("[2] chat\n");
                 printf("> ");
@@ -89,21 +92,23 @@ int main(void)
                         conn_status = send_table(&gtable, conn);
 
                         if (gtable.winner != 0)
-                            break;
+                            goto end_game;
 
                         printf("Waiting for opponent to play...\n");
-
                         conn_status = read_table(&gtable, conn, 1);
                     break;
                     case 2:
-                        /*send_chat_sign(conn);*/
+                        printf("\nMaximum message size: 200 chars\n");
+                        printf("\nYou can put spaces in the message with '.'\n"
+                        "the opponent will se an space for every '.' (ex. 'hi.mom' = 'hi mom'), \n"
+                        "if you want to put an actual '.', write '\\.'\n");
                         send_message(conn);
                         msg_sign = 'c';
                     break;
                 }
         }
     }
-
+end_game:
     if (conn_status == 0) {
         printf("Opponent has abandoned the match\n");
         (gtable.turn == 1 ? printf("X wins\n") : printf("O wins\n"));

@@ -19,7 +19,7 @@ extern int read_sign(int __sockfd, char *msg_sign)
     int n;
 
     n = read(__sockfd, msg_sign, sizeof(char));
-    printf("%c\n", *msg_sign);
+    /*printf("%c\n", *msg_sign);*/
 
     return n;
 }

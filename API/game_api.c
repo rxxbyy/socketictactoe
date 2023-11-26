@@ -1,8 +1,14 @@
-/*  ==========================================================================
- *  game_api.c
- *  ==========================================================================
- *  It has all the functions that can be performed on the Tic Tac Toe table,
- *  also it has 
+/* ===========================================================================
+ *  SockeTicTacToe - API/game_api.c
+ * ===========================================================================
+ * The game_api contains all the functions that can be performed from the 
+ * both host and client to the game table, it also contains functions such
+ * read_table() and send_table(), which are used to send and receive the 
+ * table over the connection.
+ * ===========================================================================
+ * date: nov 26, 2023
+ * author: rxxbyy
+ * ===========================================================================
  */
 #include <stddef.h>
 #include <stdio.h>
@@ -44,6 +50,10 @@ typedef struct __game_table_t {
 } __game_table_t;
 
 
+/* _check_patterns: internal use function, it returns true if
+    the positions on 'sym' match with a winning position, otherwise
+    it returns false.
+*/
 static bool _check_patterns(unsigned short sym)
 {
     unsigned short winning_patterns[8] = {ROW1, ROW2, ROW3, COL1, COL2, COL3,
@@ -56,11 +66,20 @@ static bool _check_patterns(unsigned short sym)
     return false;
 }
 
+/* is_full(): return if the table is full, this is, if 
+    doing a bitwise or operation between X's positions and
+    O's positions it's equal to 0x1ff (0001 1111 1111).
+*/
 extern bool is_full(struct __game_table_t *gtable)
 {
     return (gtable->x | gtable->o) == 0x1ff;
 }
 
+/* play(): add a position to a symbol in the table based on the 
+    current turn, we can add a position to a symbol performing
+    a biwtise or operation between the symbol and a 1-bitmask
+    shifted 'position' times to the left.
+*/
 extern void play(struct __game_table_t* gtable)
 {
 make_play_again:
@@ -71,21 +90,30 @@ make_play_again:
 
     position--;
     if (gtable->turn == 0) {
+        /* checking if adding a position to X's symbols causes a colision
+        of positions */
         if (((gtable->x | (UINT16_C(1) << position)) & gtable->o)) {
             printf("slot already in use\n");
             goto make_play_again;
         }
         gtable->x |= (UINT16_C(1) << position);
     } else {
+        /* checking if adding a position to O's symbols causes a colision
+        of positions */
         if (((gtable->o | (UINT16_C(1) << position)) & gtable->x)) {
             printf("slot already in use\n");
             goto make_play_again;
         }
         gtable->o |= (UINT16_C(1) << position);
     }
-    gtable->turn = ~(gtable->turn);
+
+    /* we change the turn by inverting the gtable.turn bit field */
+    gtable->turn = ~(gtable->turn); 
 }
 
+/* display_table(): displays the table checking if the current
+    'i' position corresponds to an X's symbol or a O's symbol.
+*/
 extern void display_table(struct __game_table_t* gtable)
 {
     int i;
@@ -93,7 +121,12 @@ extern void display_table(struct __game_table_t* gtable)
     unsigned short bitmask = 1u; /* bit mask = 0000 0001 0000 0000 */
 
     for (i = 0; i < 9; i++) {
-        if ((gtable->x & bitmask))
+
+        /* if doing an AND bitwise operation to a symbol results in a 
+        positive number, then the current position correspond to that
+        symbol, also we can have free spaces, in that case we display
+        'position' indicating the slot number */
+        if ((gtable->x & bitmask)) 
             printf(" X ");
         else if ((gtable->o & bitmask))
             printf(" O ");
@@ -106,6 +139,10 @@ extern void display_table(struct __game_table_t* gtable)
     }
 }
 
+/* set_winner(): set the gtable.winner bit field
+    to 1 if X wins, 2 if O wins and stays in 0 if
+    no one wins.
+*/
 extern void set_winner(struct __game_table_t *gtable)
 {
     if (_check_patterns(gtable->x))
@@ -114,6 +151,9 @@ extern void set_winner(struct __game_table_t *gtable)
         gtable->winner = 2;
 }
 
+/* display_winner(): displays the game winner based
+    on the gtable.winner value.
+*/
 extern void display_winner(struct __game_table_t *gtable)
 {
     switch (gtable->winner) {
@@ -129,6 +169,9 @@ extern void display_winner(struct __game_table_t *gtable)
     }
 }
 
+/* send_table(): writes the values from the struct bit fields 
+    of gtable to the connection stream.
+*/
 extern int send_table(struct __game_table_t *gtable, int sockfd)
 {
     int n;
@@ -138,6 +181,7 @@ extern int send_table(struct __game_table_t *gtable, int sockfd)
     unsigned short x = gtable->x;
     unsigned short o = gtable->o;
 
+    /* disconnection detected, connection status: bad */
     if ( (n = write(sockfd, &sign, sizeof(char))) == -1)
         return 0;
 
@@ -146,9 +190,14 @@ extern int send_table(struct __game_table_t *gtable, int sockfd)
     write(sockfd, &x, sizeof(unsigned short));
     write(sockfd, &o, sizeof(unsigned short));
 
-    return 1;
+    return 1; /* connection status: ok */
 }
 
+/* read_table(): read the table bit fields from the connection stream
+    and modify the current game table '*gtable'. 
+    The 'sign' tells if we are going to receive a message sign before
+    read the table.
+*/
 extern int read_table(struct __game_table_t *gtable, int sockfd, bool sign)
 {
     int n;
@@ -160,7 +209,7 @@ extern int read_table(struct __game_table_t *gtable, int sockfd, bool sign)
 
     if (sign) {
         n = read(sockfd, &table_sign, sizeof(char));
-        if (n == 0)
+        if (n == 0) /* disconnection detected, connection status: bad */
             return n;
     }
     read(sockfd, &winner, sizeof(unsigned short));
@@ -173,9 +222,13 @@ extern int read_table(struct __game_table_t *gtable, int sockfd, bool sign)
     gtable->x = x;
     gtable->o = o;
 
-    return 1;
+    return 1; /* connection status: ok */
 }
 
+/* display_menu(): displays the main game menu where you can
+    start the game server, this is, create the host socket 
+    and listen for a connection or just exit the game.
+*/
 extern void display_menu(void)
 {
     char *ttt_logo = "\t\tWelcome to\n"

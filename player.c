@@ -42,24 +42,25 @@ int main(void)
     game_buff = fdopen(cplayer_sock, "r");
 
     char msg_sign;
-    char _nullchar = '\0';
     char chat_msg[MAX_BUF_SIZE];
+    int conn_status = 1;
     
-    while (!is_full(&gtable) && gtable.winner == 0) {
+    while (!is_full(&gtable) && gtable.winner == 0 && conn_status) {
         printf("Waiting for host...\n");
-        read_sign(cplayer_sock, &msg_sign);
+        conn_status = read_sign(cplayer_sock, &msg_sign);
 
         switch (msg_sign) {
             case 't':
-                read_table(&gtable, cplayer_sock, 0);
-                if (is_full(&gtable) || gtable.winner != 0)
-                    break;
+                conn_status = read_table(&gtable, cplayer_sock, 0);
+                
+                if (is_full(&gtable) || gtable.winner != 0 || !conn_status) 
+                    goto end_game;
 
                 display_table(&gtable);
 
                 play(&gtable);
                 set_winner(&gtable);
-                send_table(&gtable, cplayer_sock);
+                conn_status = send_table(&gtable, cplayer_sock);
                 break;
             case 'c':
                 read_message(cplayer_sock, chat_msg);
@@ -75,11 +76,16 @@ int main(void)
                 }
                 break;
         }
-
     }
-    display_table(&gtable);
-    display_winner(&gtable);
+end_game:
+    if (conn_status == 0) {
+        printf("Opponent has abandoned the match\n");
+        (gtable.turn == 1 ? printf("X wins\n") : printf("O wins\n"));
+    } else {
+        display_table(&gtable);
+        display_winner(&gtable);
+    }
 
-    close(cplayer_sock);
+    close(cplayer_sock); /* end connection from player */
     return 0;
 }
