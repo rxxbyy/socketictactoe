@@ -1,6 +1,6 @@
-<h1> Welcome to SockeTicTacToe </h1>
+<h1> Welcome to SockeTicTacToe 👋 </h1>
 
-# Introduction
+## Introduction
 SockeTicTacToe is a terminal game based in a server/client model using
 unix sockets for interprocess communitacion.
 
@@ -12,7 +12,7 @@ $ cd socketictactoe
 ```
 You must change the `game_addr_path` variable in _./API/game_api.h_ headerfile to a
 valid path in your filesystem, this will be the path to setup the addresses of
-the server and client sockets. Then, you can compile the project usin `make`
+the server and client sockets. Then, you can compile the project using `make`
 ```
 $ make
 ```
